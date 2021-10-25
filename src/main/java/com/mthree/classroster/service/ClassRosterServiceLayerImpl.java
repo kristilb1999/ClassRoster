@@ -1,5 +1,6 @@
 package com.mthree.classroster.service;
 
+import com.mthree.classroster.dao.ClassRosterAuditDao;
 import com.mthree.classroster.dao.ClassRosterDao;
 import com.mthree.classroster.dao.ClassRosterPersistenceException;
 import com.mthree.classroster.dto.Student;
@@ -8,10 +9,12 @@ import java.util.List;
 
 public class ClassRosterServiceLayerImpl implements ClassRosterServiceLayer {
 
-    ClassRosterDao dao;
+    private ClassRosterDao dao;
+    private ClassRosterAuditDao auditDao;
 
-    public ClassRosterServiceLayerImpl(ClassRosterDao dao) {
+    public ClassRosterServiceLayerImpl(ClassRosterDao dao, ClassRosterAuditDao auditDao) {
         this.dao = dao;
+        this.auditDao = auditDao;
     }
 
     @Override
@@ -27,6 +30,9 @@ public class ClassRosterServiceLayerImpl implements ClassRosterServiceLayer {
 
         //add data so it persists
         dao.addStudent(student.getStudentId(), student);
+
+        //now write to the audit log
+        auditDao.writeAuditEntry("Student " + student.getStudentId() + " CREATED.");
     }
 
     //pass through method
@@ -41,10 +47,14 @@ public class ClassRosterServiceLayerImpl implements ClassRosterServiceLayer {
         return dao.getStudent(studentId);
     }
 
-    //also, a pass through method -- later add Audit log info
     @Override
     public Student removeStudent(String studentId) throws ClassRosterPersistenceException {
-        return dao.removeStudent(studentId);
+        Student removedStudent = dao.removeStudent(studentId);
+
+        //write to audit log
+        auditDao.writeAuditEntry("Student " + studentId + " REMOVED.");
+
+        return removedStudent;
     }
 
     private void validateStudentData(Student student) throws ClassRosterDataValidationException {
